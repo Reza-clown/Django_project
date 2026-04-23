@@ -1,0 +1,301 @@
+{% extends 'Aplikasi/base.html' %}
+{% load static %}
+
+{% block title %}Grafik{% endblock %}
+{% block nav_charts %}active{% endblock %}
+
+{% block content %}
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
+    <h1 class="h3 mb-0 text-gray-800">Grafik Tugas</h1>
+</div>
+
+<!-- ── Baris atas: Area + Donut ─────────────────────────────────────────── -->
+<div class="row">
+
+    <!-- Area Chart: Tugas per hari (30 hari terakhir) -->
+    <div class="col-xl-8 col-lg-7 mb-4">
+        <div class="card shadow h-100">
+            <div class="card-header py-3 d-flex align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-chart-area mr-1"></i> Tugas Dibuat — 30 Hari Terakhir
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="chart-area">
+                    <canvas id="areaChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Donut Chart: Pending vs Selesai -->
+    <div class="col-xl-4 col-lg-5 mb-4">
+        <div class="card shadow h-100">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-circle-notch mr-1"></i> Status Tugas
+                </h6>
+            </div>
+            <div class="card-body d-flex flex-column align-items-center justify-content-center">
+                <div class="chart-pie w-100">
+                    <canvas id="donutChart"></canvas>
+                </div>
+                <div class="mt-4 text-center small">
+                    <span class="mr-3">
+                        <i class="fas fa-circle" style="color:#1cc88a"></i> Selesai
+                    </span>
+                    <span>
+                        <i class="fas fa-circle" style="color:#f6c23e"></i> Pending
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- ── Baris bawah: Bar + Ringkasan Kategori ────────────────────────────── -->
+<div class="row">
+
+    <!-- Bar Chart: Tugas per bulan -->
+    <div class="col-xl-8 col-lg-7 mb-4">
+        <div class="card shadow h-100">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-chart-bar mr-1"></i> Tugas Dibuat per Bulan
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="chart-bar">
+                    <canvas id="barChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ringkasan per Kategori -->
+    <div class="col-xl-4 col-lg-5 mb-4">
+        <div class="card shadow h-100">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-tags mr-1"></i> Capaian per Kategori
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if per_kategori %}
+                    {% for item in per_kategori %}
+                    {% if item.total > 0 %}
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span class="small font-weight-bold">
+                                {{ item.kategori__nama_kategori|default:"Tanpa Kategori" }}
+                            </span>
+                            <span class="small text-muted">
+                                {{ item.selesai }}/{{ item.total }}
+                                &nbsp;
+                                {% if item.total > 0 %}
+                                    ({% widthratio item.selesai item.total 100 %}%)
+                                {% endif %}
+                            </span>
+                        </div>
+                        <div class="progress" style="height: 10px;">
+                            <div class="progress-bar bg-success" role="progressbar"
+                                style="width: {% widthratio item.selesai item.total 100 %}%"
+                                aria-valuenow="{{ item.selesai }}"
+                                aria-valuemin="0"
+                                aria-valuemax="{{ item.total }}">
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                {% else %}
+                <p class="text-center text-muted py-5">
+                    <i class="fas fa-inbox fa-2x d-block mb-2"></i>
+                    Belum ada data tugas.
+                </p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+
+{% block extra_js %}
+<script src="{% static 'vendor/chart.js/Chart.min.js' %}"></script>
+<script>
+// ── Data dari Django ────────────────────────────────────────────────────────
+var areaData  = {{ area_data|safe }};
+var barData   = {{ bar_data|safe }};
+var donutData = {{ donut_data|safe }};
+
+Chart.defaults.global.defaultFontFamily = 'Nunito, -apple-system, sans-serif';
+Chart.defaults.global.defaultFontColor  = '#858796';
+
+// ── 1. Area Chart ───────────────────────────────────────────────────────────
+var ctxArea = document.getElementById('areaChart').getContext('2d');
+new Chart(ctxArea, {
+    type: 'line',
+    data: {
+        labels: areaData.labels,
+        datasets: [{
+            label: 'Tugas Dibuat',
+            lineTension: 0.3,
+            backgroundColor: 'rgba(78, 115, 223, 0.05)',
+            borderColor: 'rgba(78, 115, 223, 1)',
+            pointRadius: 3,
+            pointBackgroundColor: 'rgba(78, 115, 223, 1)',
+            pointBorderColor: 'rgba(78, 115, 223, 1)',
+            pointHoverRadius: 5,
+            pointHoverBackgroundColor: 'rgba(78, 115, 223, 1)',
+            pointHitRadius: 10,
+            pointBorderWidth: 2,
+            data: areaData.data,
+        }]
+    },
+    options: {
+        maintainAspectRatio: false,
+        layout: { padding: { left: 10, right: 25, top: 25, bottom: 0 } },
+        scales: {
+            xAxes: [{
+                gridLines: { display: false, drawBorder: false },
+                ticks: { maxTicksLimit: 7 }
+            }],
+            yAxes: [{
+                ticks: {
+                    maxTicksLimit: 5,
+                    padding: 10,
+                    beginAtZero: true,
+                    callback: function(v) { return Number.isInteger(v) ? v : null; }
+                },
+                gridLines: {
+                    color: 'rgb(234, 236, 244)',
+                    zeroLineColor: 'rgb(234, 236, 244)',
+                    drawBorder: false,
+                    borderDash: [2],
+                    zeroLineBorderDash: [2]
+                }
+            }]
+        },
+        legend: { display: false },
+        tooltips: {
+            backgroundColor: 'rgb(255,255,255)',
+            bodyFontColor: '#858796',
+            titleFontColor: '#6e707e',
+            titleFontSize: 13,
+            borderColor: '#dddfeb',
+            borderWidth: 1,
+            xPadding: 15,
+            yPadding: 15,
+            displayColors: false,
+            intersect: false,
+            mode: 'index',
+            caretPadding: 10,
+            callbacks: {
+                label: function(item) { return 'Tugas: ' + item.yLabel; }
+            }
+        }
+    }
+});
+
+// ── 2. Bar Chart ────────────────────────────────────────────────────────────
+var ctxBar = document.getElementById('barChart').getContext('2d');
+new Chart(ctxBar, {
+    type: 'bar',
+    data: {
+        labels: barData.labels,
+        datasets: [{
+            label: 'Tugas Dibuat',
+            backgroundColor: '#4e73df',
+            hoverBackgroundColor: '#2e59d9',
+            borderColor: '#4e73df',
+            data: barData.data,
+        }]
+    },
+    options: {
+        maintainAspectRatio: false,
+        layout: { padding: { left: 10, right: 25, top: 25, bottom: 0 } },
+        scales: {
+            xAxes: [{
+                gridLines: { display: false, drawBorder: false },
+                ticks: { maxTicksLimit: 12 },
+                maxBarThickness: 30,
+            }],
+            yAxes: [{
+                ticks: {
+                    min: 0,
+                    maxTicksLimit: 5,
+                    padding: 10,
+                    beginAtZero: true,
+                    callback: function(v) { return Number.isInteger(v) ? v : null; }
+                },
+                gridLines: {
+                    color: 'rgb(234, 236, 244)',
+                    zeroLineColor: 'rgb(234, 236, 244)',
+                    drawBorder: false,
+                    borderDash: [2],
+                    zeroLineBorderDash: [2]
+                }
+            }]
+        },
+        legend: { display: false },
+        tooltips: {
+            backgroundColor: 'rgb(255,255,255)',
+            bodyFontColor: '#858796',
+            titleFontColor: '#6e707e',
+            titleFontSize: 13,
+            borderColor: '#dddfeb',
+            borderWidth: 1,
+            xPadding: 15,
+            yPadding: 15,
+            displayColors: false,
+            caretPadding: 10,
+            callbacks: {
+                label: function(item) { return 'Tugas: ' + item.yLabel; }
+            }
+        }
+    }
+});
+
+// ── 3. Donut Chart ──────────────────────────────────────────────────────────
+var ctxDonut = document.getElementById('donutChart').getContext('2d');
+new Chart(ctxDonut, {
+    type: 'doughnut',
+    data: {
+        labels: donutData.labels,
+        datasets: [{
+            data: donutData.data,
+            backgroundColor: donutData.colors,
+            hoverBackgroundColor: ['#17a673', '#dda20a'],
+            hoverBorderColor: 'rgba(234, 236, 244, 1)',
+        }]
+    },
+    options: {
+        maintainAspectRatio: false,
+        tooltips: {
+            backgroundColor: 'rgb(255,255,255)',
+            bodyFontColor: '#858796',
+            borderColor: '#dddfeb',
+            borderWidth: 1,
+            xPadding: 15,
+            yPadding: 15,
+            displayColors: false,
+            caretPadding: 10,
+            callbacks: {
+                label: function(item, data) {
+                    var label = data.labels[item.index];
+                    var val   = data.datasets[0].data[item.index];
+                    var total = data.datasets[0].data.reduce(function(a, b) { return a + b; }, 0);
+                    var pct   = total > 0 ? Math.round(val / total * 100) : 0;
+                    return label + ': ' + val + ' (' + pct + '%)';
+                }
+            }
+        },
+        legend: { display: false },
+        cutoutPercentage: 75,
+    }
+});
+</script>
+{% endblock %}

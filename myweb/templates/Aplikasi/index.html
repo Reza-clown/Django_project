@@ -1,0 +1,189 @@
+{% extends 'Aplikasi/base.html' %}
+{% load static %}
+
+{% block title %}Dashboard{% endblock %}
+{% block nav_dashboard %}active{% endblock %}
+
+{% block content %}
+<!-- Page Heading -->
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
+    <h1 class="h3 mb-0 text-gray-800">Dashboard</h1>
+    <a href="{% url 'tables' %}" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm">
+        <i class="fas fa-plus fa-sm text-white-50"></i> Tambah Tugas
+    </a>
+</div>
+
+<!-- Stat Cards -->
+<div class="row">
+    <!-- Total Tugas -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Total Tugas</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-tasks fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tugas Selesai -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Tugas Selesai</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ selesai }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-check-circle fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Progress -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Progress</div>
+                        <div class="row no-gutters align-items-center">
+                            <div class="col-auto">
+                                <div class="h5 mb-0 mr-3 font-weight-bold text-gray-800">{{ progress }}%</div>
+                            </div>
+                            <div class="col">
+                                <div class="progress progress-sm mr-2">
+                                    <div class="progress-bar bg-info" role="progressbar"
+                                        style="width: {{ progress }}%"
+                                        aria-valuenow="{{ progress }}" aria-valuemin="0" aria-valuemax="100">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-clipboard-list fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tugas Pending -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-warning shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Tugas Pending</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ pending }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-hourglass-half fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="row">
+    <!-- Pie Chart per Kategori -->
+    <div class="col-xl-6 col-lg-6 mb-4">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Tugas per Kategori</h6>
+            </div>
+            <div class="card-body">
+                {% if per_kategori %}
+                <div class="chart-pie pt-4 pb-2">
+                    <canvas id="pieKategori"></canvas>
+                </div>
+                <div class="mt-4 text-center small" id="pie-legend"></div>
+                {% else %}
+                <p class="text-center text-muted py-4">Belum ada data kategori.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Progress per Kategori -->
+    <div class="col-xl-6 col-lg-6 mb-4">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Ringkasan Kategori</h6>
+            </div>
+            <div class="card-body">
+                {% if per_kategori %}
+                    {% for item in per_kategori %}
+                    <h4 class="small font-weight-bold">
+                        {{ item.kategori__nama_kategori|default:"Tanpa Kategori" }}
+                        <span class="float-right">{{ item.jumlah }} tugas</span>
+                    </h4>
+                    <div class="progress mb-4">
+                        <div class="progress-bar bg-primary" role="progressbar"
+                            style="width: {% widthratio item.jumlah total 100 %}%"
+                            aria-valuenow="{{ item.jumlah }}" aria-valuemin="0" aria-valuemax="{{ total }}">
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                <p class="text-center text-muted py-4">Belum ada tugas.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+
+{% block extra_js %}
+{% if per_kategori %}
+<script src="{% static 'vendor/chart.js/Chart.min.js' %}"></script>
+<script>
+var kategoriData = {{ per_kategori|safe }};
+var labels = kategoriData.map(function(d) {
+    return d.kategori__nama_kategori || 'Tanpa Kategori';
+});
+var data = kategoriData.map(function(d) { return d.jumlah; });
+var colors = ['#4e73df','#1cc88a','#36b9cc','#f6c23e','#e74a3b','#858796','#5a5c69'];
+
+var ctx = document.getElementById('pieKategori').getContext('2d');
+new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+        labels: labels,
+        datasets: [{
+            data: data,
+            backgroundColor: colors.slice(0, labels.length),
+            hoverBackgroundColor: colors.slice(0, labels.length),
+            hoverBorderColor: 'rgba(234, 236, 244, 1)',
+        }]
+    },
+    options: {
+        maintainAspectRatio: false,
+        tooltips: { bodyFontColor: '#858796' },
+        legend: { display: false },
+        cutoutPercentage: 80,
+    }
+});
+
+// Legend manual
+var legend = document.getElementById('pie-legend');
+labels.forEach(function(label, i) {
+    legend.innerHTML += '<span class="mr-2"><i class="fas fa-circle" style="color:' + colors[i] + '"></i> ' + label + '</span>';
+});
+</script>
+{% endif %}
+{% endblock %}

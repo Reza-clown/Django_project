@@ -1,0 +1,258 @@
+{% extends 'Aplikasi/base.html' %}
+{% load static %}
+
+{% block title %}Tabel Tugas{% endblock %}
+{% block nav_tables %}active{% endblock %}
+
+{% block extra_css %}
+<link href="{% static 'vendor/datatables/dataTables.bootstrap4.min.css' %}" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
+    <h1 class="h3 mb-0 text-gray-800">Daftar Tugas</h1>
+    <button class="btn btn-sm btn-success shadow-sm" data-toggle="modal" data-target="#modalTambah">
+        <i class="fas fa-plus fa-sm text-white-50"></i> Tambah Tugas
+    </button>
+</div>
+
+<!-- Tabel -->
+<div class="card shadow mb-4">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover" id="taskTable" width="100%" cellspacing="0">
+                <thead class="thead-light">
+                    <tr>
+                        <th>#</th>
+                        <th>Judul Tugas</th>
+                        <th>Deadline</th>
+                        <th>Kategori</th>
+                        <th>Deskripsi</th>
+                        <th>Status</th>
+                        <th class="text-center">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for tugas in tugas_list %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ tugas.judul }}</td>
+                        <td>{{ tugas.deadline|date:"d M Y H:i" }}</td>
+                        <td>
+                            {% if tugas.kategori %}
+                            <span class="badge badge-info">{{ tugas.kategori.nama_kategori }}</span>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ tugas.deskripsi|truncatewords:8|default:"-" }}</td>
+                        <td class="text-center">
+                            <!-- Toggle status langsung dari tabel -->
+                            <form method="post" action="{% url 'tugas_toggle' tugas.pk %}" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm {% if tugas.status == 'selesai' %}btn-success{% else %}btn-warning{% endif %}">
+                                    {% if tugas.status == 'selesai' %}
+                                        <i class="fas fa-check"></i> Selesai
+                                    {% else %}
+                                        <i class="fas fa-hourglass-half"></i> Pending
+                                    {% endif %}
+                                </button>
+                            </form>
+                        </td>
+                        <td class="text-center">
+                            <!-- Tombol Edit -->
+                            <button class="btn btn-sm btn-primary btn-edit"
+                                data-id="{{ tugas.pk }}"
+                                data-judul="{{ tugas.judul }}"
+                                data-deskripsi="{{ tugas.deskripsi }}"
+                                data-deadline="{{ tugas.deadline|date:'Y-m-d\TH:i' }}"
+                                data-kategori="{{ tugas.kategori.nama_kategori|default:'' }}"
+                                data-status="{{ tugas.status }}"
+                                data-toggle="modal" data-target="#modalEdit">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <!-- Tombol Hapus -->
+                            <button class="btn btn-sm btn-danger btn-hapus"
+                                data-id="{{ tugas.pk }}"
+                                data-judul="{{ tugas.judul }}"
+                                data-toggle="modal" data-target="#modalHapus">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-4">
+                            <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
+                            Belum ada tugas. Klik "Tambah Tugas" untuk mulai.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+
+<!-- ── Modal Tambah ─────────────────────────────────────────────────────── -->
+<div class="modal fade" id="modalTambah" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <form method="post" action="{% url 'tugas_tambah' %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-plus-circle text-success mr-2"></i>Tambah Tugas</h5>
+                    <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Judul Tugas <span class="text-danger">*</span></label>
+                        <input type="text" name="judul" class="form-control" placeholder="Contoh: Kerjakan laporan PKL" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Deadline <span class="text-danger">*</span></label>
+                        <input type="datetime-local" name="deadline" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Kategori</label>
+                        <input type="text" name="kategori" class="form-control" placeholder="Contoh: Kuliah, Organisasi, Pribadi"
+                            list="kategori-suggestions">
+                        <datalist id="kategori-suggestions">
+                            {% for k in kategori_list %}
+                            <option value="{{ k.nama_kategori }}">
+                            {% endfor %}
+                        </datalist>
+                        <small class="form-text text-muted">Ketik nama kategori baru atau pilih yang sudah ada.</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Deskripsi</label>
+                        <textarea name="deskripsi" class="form-control" rows="3" placeholder="Catatan tambahan..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-save mr-1"></i> Simpan
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+<!-- ── Modal Edit ───────────────────────────────────────────────────────── -->
+<div class="modal fade" id="modalEdit" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <form method="post" id="formEdit" action="">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-edit text-primary mr-2"></i>Edit Tugas</h5>
+                    <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Judul Tugas <span class="text-danger">*</span></label>
+                        <input type="text" name="judul" id="editJudul" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Deadline <span class="text-danger">*</span></label>
+                        <input type="datetime-local" name="deadline" id="editDeadline" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Kategori</label>
+                        <input type="text" name="kategori" id="editKategori" class="form-control"
+                            list="kategori-suggestions-edit">
+                        <datalist id="kategori-suggestions-edit">
+                            {% for k in kategori_list %}
+                            <option value="{{ k.nama_kategori }}">
+                            {% endfor %}
+                        </datalist>
+                    </div>
+                    <div class="form-group">
+                        <label>Deskripsi</label>
+                        <textarea name="deskripsi" id="editDeskripsi" class="form-control" rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Status</label>
+                        <select name="status" id="editStatus" class="form-control">
+                            <option value="pending">Pending</option>
+                            <option value="selesai">Selesai</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save mr-1"></i> Perbarui
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+<!-- ── Modal Hapus ──────────────────────────────────────────────────────── -->
+<div class="modal fade" id="modalHapus" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-sm" role="document">
+        <div class="modal-content">
+            <form method="post" id="formHapus" action="">
+                {% csrf_token %}
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title"><i class="fas fa-exclamation-triangle mr-2"></i>Hapus Tugas</h5>
+                    <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+                </div>
+                <div class="modal-body">
+                    Yakin mau hapus tugas <strong id="hapusJudul"></strong>?
+                    <br><small class="text-muted">Aksi ini tidak bisa dibatalkan.</small>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash mr-1"></i> Hapus
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+
+{% block extra_js %}
+<script src="{% static 'vendor/datatables/jquery.dataTables.min.js' %}"></script>
+<script src="{% static 'vendor/datatables/dataTables.bootstrap4.min.js' %}"></script>
+<script>
+$(document).ready(function () {
+    // Init DataTable
+    $('#taskTable').DataTable({
+        language: {
+            url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/id.json'
+        },
+        order: [[2, 'asc']]  // sort by deadline ascending
+    });
+
+    // Isi modal Edit
+    $('.btn-edit').on('click', function () {
+        var id = $(this).data('id');
+        $('#formEdit').attr('action', '/tugas/edit/' + id + '/');
+        $('#editJudul').val($(this).data('judul'));
+        $('#editDeadline').val($(this).data('deadline'));
+        $('#editKategori').val($(this).data('kategori'));
+        $('#editDeskripsi').val($(this).data('deskripsi'));
+        $('#editStatus').val($(this).data('status'));
+    });
+
+    // Isi modal Hapus
+    $('.btn-hapus').on('click', function () {
+        var id = $(this).data('id');
+        $('#formHapus').attr('action', '/tugas/hapus/' + id + '/');
+        $('#hapusJudul').text($(this).data('judul'));
+    });
+});
+</script>
+{% endblock %}
